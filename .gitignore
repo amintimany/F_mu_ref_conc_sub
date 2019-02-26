@@ -1,0 +1,16 @@
+*.vo
+*.vio
+*.v.d
+.coqdeps.d
+*.glob
+*.cache
+*.aux
+\#*\#
+.\#*
+*~
+*.bak
+Makefile.coq
+Makefile.coq.conf
+.coq-native/
+build-dep
+_opam

@@ -1,0 +1,15 @@
+-Q . F_mu_ref_conc_sub
+-arg -w -arg -notation-overridden,-redundant-canonical-projection,-several-object-files
+
+base.v
+lang.v
+rules.v
+typing.v
+logrel_unary.v
+fundamental_unary.v
+rules_binary.v
+logrel_binary.v
+fundamental_binary.v
+soundness_unary.v
+context_refinement.v
+soundness_binary.v

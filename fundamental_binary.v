@@ -6,7 +6,8 @@ From iris.program_logic Require Export lifting.
 
 Section bin_log_def.
   Context `{heapIG Σ, cfgSG Σ}.
-  Notation D := (prodC valC valC -n> iProp Σ).
+  Notation D := (prodO (valO F_mu_ref_conc_lang) (valO F_mu_ref_conc_lang)
+                 -n> iProp Σ).
 
   Definition bin_log_related (Ξ Γ : list type) (e e' : expr) (τ : type) := ∀ Δ vvs ρ,
     env_Persistent Δ →
@@ -19,9 +20,10 @@ Notation "Ξ ∣ Γ ⊨ e '≤log≤' e' : τ" :=
 
 Section fundamental.
   Context `{heapIG Σ, cfgSG Σ}.
-  Notation D := (prodC valC valC -n> iProp Σ).
+  Notation D := (prodO (valO F_mu_ref_conc_lang) (valO F_mu_ref_conc_lang)
+                 -n> iProp Σ).
   Implicit Types e : expr.
-  Implicit Types Δ : listC D.
+  Implicit Types Δ : listO D.
   Hint Resolve to_of_val.
 
   Local Tactic Notation "smart_wp_bind" uconstr(ctx) ident(v) ident(w)

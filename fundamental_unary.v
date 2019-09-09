@@ -11,7 +11,7 @@ Notation "Ξ | Γ ⊨ e : τ" := (log_typed Ξ Γ e τ) (at level 74, e, τ at n
 
 Section typed_interp.
   Context `{heapIG Σ}.
-  Notation D := (valC -n> iProp Σ).
+  Notation D := (valO F_mu_ref_conc_lang -n> iProp Σ).
 
   Local Tactic Notation "smart_wp_bind" uconstr(ctx) ident(v) constr(Hv) uconstr(Hp) :=
     iApply (wp_bind (fill [ctx]));

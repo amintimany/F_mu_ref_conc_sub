@@ -1,6 +1,6 @@
 From iris.program_logic Require Export language ectx_language ectxi_language.
 From iris.program_logic Require Import lifting.
-From iris.algebra Require Import auth frac agree gmap list.
+From iris.algebra Require Import auth frac agree gmap list excl.
 From F_mu_ref_conc_sub Require Export rules.
 From iris.proofmode Require Import tactics.
 Import uPred.
@@ -8,7 +8,7 @@ Import uPred.
 Definition specN := nroot .@ "spec".
 
 (** The CMRA for the heap of the specification. *)
-Definition tpoolUR : ucmraT := gmapUR nat (exclR exprC).
+Definition tpoolUR : ucmraT := gmapUR nat (exclR (exprO F_mu_ref_conc_lang)).
 Definition cfgUR := prodUR tpoolUR (gen_heapUR loc val).
 
 Fixpoint to_tpool_go (i : nat) (tp : list expr) : tpoolUR :=
@@ -67,7 +67,8 @@ Section conversions.
   Lemma to_tpool_valid es : ✓ to_tpool es.
   Proof.
     rewrite /to_tpool. move: 0.
-    induction es as [|e es]=> n //. by apply insert_valid.
+    induction es as [|e es]=> n //.
+    by apply: insert_valid.
   Qed.
 
   Lemma tpool_lookup tp j : to_tpool tp !! j = Excl <$> tp !! j.
@@ -107,7 +108,7 @@ Section conversions.
     - by rewrite lookup_insert tpool_lookup lookup_app_r // Nat.sub_diag.
     - rewrite lookup_insert_ne; last lia.
       rewrite !tpool_lookup ?lookup_ge_None_2 ?app_length //=;
-         change (ofe_car exprC) with expr; lia.
+         change (ofe_car (exprO F_mu_ref_conc_lang)) with expr; lia.
   Qed.
 
   Lemma tpool_singleton_included tp j e :
@@ -174,10 +175,12 @@ Section cfg.
     iInv specN as (tp σ) ">[Hown Hrtc]" "Hclose".
     iDestruct "Hrtc" as %Hrtc.
     iDestruct (own_valid_2 with "Hown Hj")
-      as %[[Htpj%tpool_singleton_included' _]%prod_included ?]%auth_valid_discrete_2.
+      as %[[Htpj%tpool_singleton_included' _]%prod_included ?]%auth_both_valid.
     iMod (own_update_2 with "Hown Hj") as "[Hown Hj]".
-    { by eapply auth_update, prod_local_update_1,
-        singleton_local_update, (exclusive_local_update _ (Excl (fill K e'))). }
+    { eapply auth_update, prod_local_update_1.
+      apply: singleton_local_update; first done.
+      by apply (exclusive_local_update (A := exclR (exprO _))
+                                       _ (Excl (fill K e'))). }
     iFrame "Hj". iApply "Hclose". iNext. iExists (<[j:=fill K e']> tp), σ.
     rewrite to_tpool_insert'; last eauto.
     iFrame. iPureIntro.
@@ -221,13 +224,16 @@ Section cfg.
     iInv specN as (tp σ) ">[Hown %]" "Hclose".
     destruct (exist_fresh (dom (gset positive) σ)) as [l Hl%not_elem_of_dom].
     iDestruct (own_valid_2 with "Hown Hj")
-      as %[[?%tpool_singleton_included' _]%prod_included ?]%auth_valid_discrete_2.
+      as %[[?%tpool_singleton_included' _]%prod_included ?]%auth_both_valid.
     iMod (own_update_2 with "Hown Hj") as "[Hown Hj]".
-    { by eapply auth_update, prod_local_update_1,
-        singleton_local_update, (exclusive_local_update _ (Excl (fill K (Loc l)))). }
+    { eapply auth_update, prod_local_update_1.
+      apply: singleton_local_update; first done.
+      by apply (exclusive_local_update (A := exclR (exprO _))
+                                    _ (Excl (fill K (Loc l)))). }
     iMod (own_update with "Hown") as "[Hown Hl]".
-    { eapply auth_update_alloc, prod_local_update_2,
-        (alloc_singleton_local_update _ l (1%Qp,to_agree v)); last done.
+    { eapply auth_update_alloc, prod_local_update_2.
+      apply (alloc_singleton_local_update (A := (prodR _ (agreeR (valO _))))
+                                          _ l (1%Qp, to_agree v)); last done.
       by apply lookup_to_gen_heap_None. }
     iExists l. rewrite /heapS_mapsto. iFrame "Hj Hl". iApply "Hclose". iNext.
     iExists (<[j:=fill K (Loc l)]> tp), (<[l:=v]>σ).
@@ -244,11 +250,14 @@ Section cfg.
     rewrite /spec_ctx /tpool_mapsto /heapS_mapsto.
     iInv specN as (tp σ) ">[Hown %]" "Hclose".
     iDestruct (own_valid_2 with "Hown Hj")
-      as %[[?%tpool_singleton_included' _]%prod_included ?]%auth_valid_discrete_2.
-    iDestruct (own_valid_2 with "Hown Hl") 
-      as %[[? ?%gen_heap_singleton_included]%prod_included ?]%auth_valid_discrete_2.     iMod (own_update_2 with "Hown Hj") as "[Hown Hj]".
-    { by eapply auth_update, prod_local_update_1, singleton_local_update,
-        (exclusive_local_update _ (Excl (fill K (of_val v)))). }
+      as %[[?%tpool_singleton_included' _]%prod_included ?]%auth_both_valid.
+    iDestruct (own_valid_2 with "Hown Hl")
+      as %[[? ?%gen_heap_singleton_included]%prod_included ?]%auth_both_valid.
+    iMod (own_update_2 with "Hown Hj") as "[Hown Hj]".
+    { eapply auth_update, prod_local_update_1.
+      apply: singleton_local_update; first done.
+      by apply (exclusive_local_update (A := exclR (exprO _))
+                                    _ (Excl (fill K (of_val v)))). }
     iFrame "Hj Hl". iApply "Hclose". iNext.
     iExists (<[j:=fill K (of_val v)]> tp), σ.
     rewrite to_tpool_insert'; last eauto. iFrame. iPureIntro.
@@ -264,16 +273,20 @@ Section cfg.
     rewrite /spec_ctx /tpool_mapsto /heapS_mapsto.
     iInv specN as (tp σ) ">[Hown %]" "Hclose".
     iDestruct (own_valid_2 with "Hown Hj")
-      as %[[?%tpool_singleton_included' _]%prod_included _]%auth_valid_discrete_2.
+      as %[[?%tpool_singleton_included' _]%prod_included _]%auth_both_valid.
     iDestruct (own_valid_2 with "Hown Hl")
-      as %[[_ Hl%gen_heap_singleton_included]%prod_included _]%auth_valid_discrete_2.
+      as %[[_ Hl%gen_heap_singleton_included]%prod_included _]%auth_both_valid.
     iMod (own_update_2 with "Hown Hj") as "[Hown Hj]".
-    { by eapply auth_update, prod_local_update_1, singleton_local_update,
-        (exclusive_local_update _ (Excl (fill K Unit))). }
+    { eapply auth_update, prod_local_update_1.
+      apply: singleton_local_update; first done.
+      by apply (exclusive_local_update (A := exclR (exprO _))
+                                       _ (Excl (fill K Unit))). }
     iMod (own_update_2 with "Hown Hl") as "[Hown Hl]".
-    { eapply auth_update, prod_local_update_2, singleton_local_update,
-        (exclusive_local_update _ (1%Qp, to_agree v)); last done.
-      by rewrite /to_gen_heap lookup_fmap Hl. }
+    { eapply auth_update, prod_local_update_2.
+      apply: singleton_local_update.
+      { by rewrite /to_gen_heap lookup_fmap Hl. }
+        by apply (exclusive_local_update (A := prodR _ (agreeR (valO _)))
+                                    _ (1%Qp, to_agree v)). }
     iFrame "Hj Hl". iApply "Hclose". iNext.
     iExists (<[j:=fill K Unit]> tp), (<[l:=v]>σ).
     rewrite to_gen_heap_insert to_tpool_insert'; last eauto. iFrame. iPureIntro.
@@ -289,12 +302,14 @@ Section cfg.
     rewrite /spec_ctx /tpool_mapsto /heapS_mapsto.
     iInv specN as (tp σ) ">[Hown %]" "Hclose".
     iDestruct (own_valid_2 with "Hown Hj")
-      as %[[?%tpool_singleton_included' _]%prod_included ?]%auth_valid_discrete_2.
+      as %[[?%tpool_singleton_included' _]%prod_included ?]%auth_both_valid.
     iDestruct (own_valid_2 with "Hown Hl")
-      as %[[_ ?%gen_heap_singleton_included]%prod_included _]%auth_valid_discrete_2.
+      as %[[_ ?%gen_heap_singleton_included]%prod_included _]%auth_both_valid.
     iMod (own_update_2 with "Hown Hj") as "[Hown Hj]".
-    { by eapply auth_update, prod_local_update_1, singleton_local_update,
-        (exclusive_local_update _ (Excl (fill K (#♭ false)))). }
+    { eapply auth_update, prod_local_update_1.
+      apply: singleton_local_update; first done.
+      by apply (exclusive_local_update (A := exclR (exprO _))
+                                    _ (Excl (fill K (#♭ false)))). }
     iFrame "Hj Hl". iApply "Hclose". iNext.
     iExists (<[j:=fill K (#♭ false)]> tp), σ.
     rewrite to_tpool_insert'; last eauto. iFrame. iPureIntro.
@@ -310,16 +325,20 @@ Section cfg.
     rewrite /spec_ctx /tpool_mapsto /heapS_mapsto.
     iInv specN as (tp σ) ">[Hown %]" "Hclose".
     iDestruct (own_valid_2 with "Hown Hj")
-      as %[[?%tpool_singleton_included' _]%prod_included _]%auth_valid_discrete_2.
+      as %[[?%tpool_singleton_included' _]%prod_included _]%auth_both_valid.
     iDestruct (own_valid_2 with "Hown Hl")
-      as %[[_ Hl%gen_heap_singleton_included]%prod_included _]%auth_valid_discrete_2.
+      as %[[_ Hl%gen_heap_singleton_included]%prod_included _]%auth_both_valid.
     iMod (own_update_2 with "Hown Hj") as "[Hown Hj]".
-    { by eapply auth_update, prod_local_update_1, singleton_local_update,
-        (exclusive_local_update _ (Excl (fill K (#♭ true)))). }
+    { eapply auth_update, prod_local_update_1.
+      apply: singleton_local_update; first done.
+      by apply (exclusive_local_update (A := exclR (exprO _))
+            _ (Excl (fill K (#♭ true)))). }
     iMod (own_update_2 with "Hown Hl") as "[Hown Hl]".
-    { eapply auth_update, prod_local_update_2, singleton_local_update,
-        (exclusive_local_update _ (1%Qp, to_agree v2)); last done.
-      by rewrite /to_gen_heap lookup_fmap Hl. }
+    { eapply auth_update, prod_local_update_2.
+      apply: singleton_local_update.
+      { by rewrite /to_gen_heap lookup_fmap Hl. }
+        by apply (exclusive_local_update (A := prodR _ (agreeR (valO _)))
+                                    _ (1%Qp, to_agree v2)). }
     iFrame "Hj Hl". iApply "Hclose". iNext.
     iExists (<[j:=fill K (#♭ true)]> tp), (<[l:=v2]>σ).
     rewrite to_gen_heap_insert to_tpool_insert'; last eauto. iFrame. iPureIntro.
@@ -405,14 +424,17 @@ Section cfg.
     iIntros (?) "[#Hspec Hj]". rewrite /spec_ctx /tpool_mapsto.
     iInv specN as (tp σ) ">[Hown %]" "Hclose".
     iDestruct (own_valid_2 with "Hown Hj")
-      as %[[?%tpool_singleton_included' _]%prod_included ?]%auth_valid_discrete_2.
+      as %[[?%tpool_singleton_included' _]%prod_included ?]%auth_both_valid.
     assert (j < length tp) by eauto using lookup_lt_Some.
     iMod (own_update_2 with "Hown Hj") as "[Hown Hj]".
-    { by eapply auth_update, prod_local_update_1,
-        singleton_local_update, (exclusive_local_update _ (Excl (fill K Unit))). }
+    { eapply auth_update, prod_local_update_1.
+      apply: singleton_local_update; first done.
+      by apply (exclusive_local_update (A := exclR (exprO _))
+                                    _ (Excl (fill K Unit))). }
     iMod (own_update with "Hown") as "[Hown Hfork]".
-    { eapply auth_update_alloc, prod_local_update_1,
-        (alloc_singleton_local_update _ (length tp) (Excl e)); last done.
+    { eapply auth_update_alloc, prod_local_update_1.
+      apply (alloc_singleton_local_update (A := exclR (exprO _))
+                                          _ (length tp) (Excl e)); last done.
       rewrite lookup_insert_ne ?tpool_lookup; last lia.
       by rewrite lookup_ge_None_2. }
     iExists (length tp). iFrame "Hj Hfork". iApply "Hclose". iNext.

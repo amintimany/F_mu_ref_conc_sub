@@ -5,7 +5,7 @@ From iris.base_logic Require Import invariants.
 From Autosubst Require Export Autosubst.
 Import uPred.
 
-Canonical Structure varC := leibnizC var.
+Canonical Structure varO := leibnizO var.
 
 Section Autosubst_Lemmas.
   Context {term : Type} {Ids_term : Ids term}

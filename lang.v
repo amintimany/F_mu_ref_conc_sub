@@ -353,3 +353,19 @@ Ltac solve_atomic :=
 
 Hint Extern 0 (Atomic _ _) => solve_atomic.
 Hint Extern 0 (Atomic _ _) => solve_atomic : typeclass_instances.
+
+Fixpoint env_subst (vs : list val) : var → expr :=
+  match vs with
+  | [] => ids
+  | v :: vs' => (of_val v) .: env_subst vs'
+  end.
+
+Lemma env_subst_lookup vs x v :
+  vs !! x = Some v → env_subst vs x = of_val v.
+Proof.
+  revert vs; induction x => vs.
+  - by destruct vs; inversion 1.
+  - destruct vs as [|w vs]; first by inversion 1.
+    rewrite -lookup_tail /=.
+    apply IHx.
+Qed.

@@ -26,7 +26,11 @@ Inductive subtype : list type → type → type → Prop :=
 | sbt_arrow Ξ σ σ' τ τ' : subtype Ξ σ' σ → subtype Ξ τ τ' →
                         subtype Ξ (TArrow σ τ) (TArrow σ' τ')
 | sbt_forall Ξ σ τ1 τ2 : subtype (σ.[ren (+1)] :: (subst (ren (+1)) <$> Ξ)) τ1 τ2 →
-                         subtype Ξ (TForall σ τ1) (TForall σ τ2).
+                         subtype Ξ (TForall σ τ1) (TForall σ τ2)
+| sbt_rec Ξ σ τ :
+    subtype ((TVar 1) :: (TVar 1) :: (subst (ren (+2)) <$> Ξ))
+            σ.[up (ren (+1))] τ.[ren (+1)] →
+    subtype Ξ (TRec σ) (TRec τ).
 
 Fixpoint binop_res_type (op : binop) : type :=
   match op with

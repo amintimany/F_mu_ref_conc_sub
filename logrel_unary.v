@@ -258,6 +258,46 @@ Section logrel.
       iIntros (?) "#?"; iApply "IH"; eauto.
       + by iPureIntro; apply env_persistent_cons.
       + iAlways. rewrite -interp_Tenv_weaken; auto.
+    - iLöb as "ILH" forall (v) "Hτ".
+      rewrite (fixpoint_unfold (interp_rec1 ⟦ σ ⟧ Δ) v).
+      rewrite (fixpoint_unfold (interp_rec1 ⟦ τ ⟧ Δ) v).
+      simpl.
+      iAlways.
+      iDestruct "Hτ" as (w ?) "Hτ".
+      iExists _; iSplit; first done.
+      iNext.
+      iSpecialize ("IH" $! (fixpoint (interp_rec1 ⟦ σ ⟧ Δ) ::
+                            fixpoint (interp_rec1 ⟦ τ ⟧ Δ) :: Δ) with "[]").
+      { iPureIntro.
+        constructor; last constructor; last done.
+        - intros; by apply (interp_persistent (TRec σ)).
+        - intros; by apply (interp_persistent (TRec τ)). }
+      iSpecialize ("IH" $! w with "[]").
+      { iAlways.
+        iDestruct "HΞ" as "[HΞ1 HΞ2]".
+        iSplit.
+        { rewrite /= fmap_length. by iDestruct "HΞ1" as %->. }
+        iIntros (x ρ Hx).
+        destruct x as [|[|x]]; simpl in *; simplify_eq; simpl.
+        - change (fixpoint (interp_rec1 ⟦ σ ⟧ Δ)) with (⟦ TRec σ ⟧ Δ).
+          iAlways. by iIntros (u) "#?"; iApply "ILH".
+        - change (fixpoint (interp_rec1 ⟦ τ ⟧ Δ)) with (⟦ TRec τ ⟧ Δ).
+          change (fixpoint (interp_rec1 ⟦ σ ⟧ Δ)) with (⟦ TRec σ ⟧ Δ).
+          iAlways. by iIntros (u) "#?".
+        - iAlways.
+          rewrite list_lookup_fmap in Hx.
+          iIntros (u) "Hu".
+          destruct (Δ !! x) as [δ|] eqn:HΔx; rewrite HΔx; last done.
+          destruct (Ξ !! x) as [δ'|] eqn:HΞx; last done.
+          iSpecialize ("HΞ2" $! x δ' with "[]"); first done.
+          rewrite HΔx; simpl.
+          iSpecialize ("HΞ2" $! u with "Hu").
+          simpl in *; simplify_eq.
+          change (δ'.[ren (+2)]) with (δ'.[upn 0 (ren (+2))]).
+          by rewrite (interp_weaken [] [_; _] _ _ _). }
+      rewrite (interp_weaken [] [_] (_ :: _) _ _).
+      rewrite (interp_weaken [_] [_] _ _ _).
+      by iApply "IH".
   Qed.
 
 End logrel.

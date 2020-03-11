@@ -89,8 +89,10 @@ Inductive subtype : list type → type → type → Prop :=
     subtype Ξ (TForall σ τ1) (TForall σ τ2)
 |sbt_rec Ξ σ τ :
    valid_type (TRec σ) → valid_type (TRec τ) →
-   subtype ((TRec σ).[ren (+1)] :: (subst (ren (+1)) <$> Ξ)) σ τ →
-   subtype Ξ (TRec σ) (TRec τ).
+    subtype ((TVar 1) :: (TVar 1) :: (subst (ren (+2)) <$> Ξ))
+            σ.[up (ren (+1))] τ.[ren (+1)] →
+    subtype Ξ (TRec σ) (TRec τ).
+
 
 Lemma subtype_valid Ξ σ τ : subtype Ξ σ τ → valid_type σ ↔ valid_type τ.
 Proof.

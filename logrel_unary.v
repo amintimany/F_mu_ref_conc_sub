@@ -9,9 +9,9 @@ Definition logN : namespace := nroot .@ "logN".
 
 Record domain_func (A B : ofeT) : Type := DomainFunc {
   domain_func_car :> A → B;
-  domain_func_is_strongly_contractive : bool;
+  domain_func_is_contractive : bool;
   domain_func_maybe_contractive :
-    if domain_func_is_strongly_contractive then
+    if domain_func_is_contractive then
       Contractive domain_func_car
     else
       NonExpansive domain_func_car
@@ -574,6 +574,13 @@ Section logrel.
       iAlways.
       iExists _; iSplit; first done.
       rewrite /make_contractive !valid_rec_type //.
+      iSpecialize ("IH" $! (fixpoint (interp_rec1 ⟦ σ ⟧ Δ)
+                                     :: fixpoint (interp_rec1 ⟦ τ ⟧ Δ) :: Δ) w
+                     with "[]").
+      { iAlways.
+
+
+
       iApply ("IH").
       + iAlways.
         rewrite -(interp_Tenv_weaken _ _ (TRec _)).
